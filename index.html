@@ -203,8 +203,23 @@
         }
 
         async function addToPlaylist(videoId, title) {
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'add', videoId, title }) });
-            fetchPlaylist();
+            // ส่งข้อมูลไปให้ Google Sheets เป็นคนตรวจสอบและบันทึก
+            const res = await fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: 'add', videoId, title }) 
+            });
+            
+            // รอรับคำตอบกลับมา
+            const data = await res.json();
+            
+            if (data.status === 'duplicate') {
+                // ถ้า Sheets บอกว่าซ้ำ ให้เด้งเตือน
+                alert("⚠️ เพลงนี้ถูกเพิ่มไปแล้วครับ (ข้อมูลจากเซิร์ฟเวอร์)");
+            } else if (data.status === 'success') {
+                // ถ้า Sheets บันทึกสำเร็จ
+                alert("✅ เพิ่มลงเพลย์ลิสต์สำเร็จ!");
+                fetchPlaylist(); // รีเฟรชหน้าจอ
+            }
         }
 
         async function removeFromPlaylist(videoId) {
