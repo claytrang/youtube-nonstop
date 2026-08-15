@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MyTube Premium</title>
+    <!-- 🌟 PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+    <style>
+        body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #player-container { width: 100%; aspect-ratio: 16/9; background: #000; flex-shrink: 0; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .controls { padding: 10px; background: #1a1a1a; display: flex; gap: 10px; flex-shrink: 0; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: white; font-size: 16px; }
+        button { padding: 12px 15px; border-radius: 8px; border: none; background: #cc0000; color: white; font-weight: bold; cursor: pointer; }
+        button.dl-btn { background: #28a745; }
+        .list-container { flex: 1; overflow-y: auto; padding: 10px; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #222; margin-bottom: 8px; border-radius: 8px; }
+        .item-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; cursor: pointer; }
+        .action-btns { display: flex; gap: 5px; }
+        .action-btns button { padding: 8px; font-size: 12px; }
+        .tabs { display: flex; background: #1a1a1a; }
+        .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
+        .tab.active { border-bottom: 3px solid #cc0000; color: #cc0000; }
+    </style>
+</head>
+<body>
+
+    <div id="player-container">
+        <div id="ytplayer"></div>
+    </div>
+
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="ค้นหาเพลง / วิดีโอ...">
+        <button onclick="searchVideo()">🔍</button>
+        <button class="dl-btn" onclick="downloadCurrentVideo()">📥 MP4</button>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" id="tab-playlist" onclick="switchTab('playlist')">เพลย์ลิสต์ของฉัน</div>
+        <div class="tab" id="tab-search" onclick="switchTab('search')">ผลการค้นหา</div>
+    </div>
+
+    <div class="list-container" id="list-area">
+        <!-- รายการจะถูกแทรกที่นี่ -->
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        // 🔴 นำ URL จาก Google Apps Script มาใส่ที่นี่
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwYac7zxfxlWNkduys9e05mGmWemozVlQkrETlHg0Ed8kWPjhVFXY3KGvUdLqGWSnx4/exec"; 
+        
+        // 🔴 นำ YouTube Data API v3 Key มาใส่ที่นี่
+        const YT_API_KEY = "AIzaSyCpFcBvTTmQgsabC2pKIo5p15fiLDYXClc"; 
+
+        let player;
+        let currentPlaylist = [];
+        let currentIndex = -1;
+        let currentMode = 'playlist'; // 'playlist' หรือ 'search'
+
+        // 🌟 1. ตั้งค่า YouTube Player
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('ytplayer', {
+                height: '100%', width: '100%', videoId: '',
+                playerVars: { 'autoplay': 1, 'controls': 1, 'playsinline': 1 },
+                events: {
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+            fetchPlaylist();
+        }
+
+        // 🌟 2. เล่นต่อเนื่อง (แก้ปัญหาเว็บถามว่ายังดูอยู่ไหม)
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                playNext();
+            }
+            if (event.data === YT.PlayerState.PLAYING) {
+                setupMediaSession(); // อัปเดต Lock Screen
+            }
+        }
+
+        function playVideo(videoId, index = -1) {
+            if (player && videoId) {
+                player.loadVideoById(videoId);
+                currentIndex = index;
+            }
+        }
+
+        function playNext() {
+            if (currentPlaylist.length > 0 && currentIndex < currentPlaylist.length - 1) {
+                currentIndex++;
+                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
+            }
+        }
+
+        function playPrev() {
+            if (currentPlaylist.length > 0 && currentIndex > 0) {
+                currentIndex--;
+                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
+            }
+        }
+
+        // 🌟 3. จัดการ Google Sheets (Playlist)
+        async function fetchPlaylist() {
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            if (data.status === 'success') {
+                currentPlaylist = data.data;
+                if (currentMode === 'playlist') renderList(currentPlaylist, true);
+            }
+        }
+
+        async function addToPlaylist(videoId, title) {
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'add', videoId, title })
+            });
+            fetchPlaylist();
+        }
+
+        async function removeFromPlaylist(videoId) {
+            await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'remove', videoId })
+            });
+            fetchPlaylist();
+        }
+
+        // 🌟 4. ระบบค้นหา (YouTube API)
+        async function searchVideo() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+            
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(query)}&type=video&key=${YT_API_KEY}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const searchResults = data.items.map(item => ({
+                videoId: item.id.videoId,
+                title: item.snippet.title
+            }));
+            
+            switchTab('search');
+            renderList(searchResults, false);
+        }
+
+        // 🌟 5. เรนเดอร์รายการ UI
+        function renderList(items, isPlaylist) {
+            const container = document.getElementById('list-area');
+            container.innerHTML = '';
+            
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'item-title';
+                titleDiv.innerText = item.title;
+                titleDiv.onclick = () => playVideo(item.videoId, isPlaylist ? index : -1);
+                
+                const actionBtns = document.createElement('div');
+                actionBtns.className = 'action-btns';
+                
+                if (isPlaylist) {
+                    actionBtns.innerHTML = `<button style="background:#555;" onclick="removeFromPlaylist('${item.videoId}')">🗑️</button>`;
+                } else {
+                    actionBtns.innerHTML = `<button style="background:#007bff;" onclick="addToPlaylist('${item.videoId}', '${item.title.replace(/'/g, "")}')">➕ เพิ่ม</button>`;
+                }
+
+                div.appendChild(titleDiv);
+                div.appendChild(actionBtns);
+                container.appendChild(div);
+            });
+        }
+
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-playlist').className = mode === 'playlist' ? 'tab active' : 'tab';
+            document.getElementById('tab-search').className = mode === 'search' ? 'tab active' : 'tab';
+            if (mode === 'playlist') renderList(currentPlaylist, true);
+        }
+
+        // 🌟 6. ระบบดาวน์โหลด MP4
+        function downloadCurrentVideo() {
+            if (!player) return alert("ยังไม่ได้เปิดวิดีโอ");
+            const urlData = player.getVideoUrl();
+            const videoId = urlData.split('v=')[1];
+            if (videoId) {
+                // เปลี่ยนเส้นทางไปยัง API ดาวน์โหลดที่รองรับการเลือกความละเอียด
+                const downloadUrl = `https://loader.to/api/button/?url=https://www.youtube.com/watch?v=${videoId}&f=mp4`;
+                window.open(downloadUrl, '_blank');
+            }
+        }
+
+        // 🌟 Pro Tip: Media Session API (ควบคุมผ่าน Lock Screen)
+        function setupMediaSession() {
+            if ('mediaSession' in navigator && currentIndex >= 0) {
+                const videoData = currentPlaylist[currentIndex];
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: videoData ? videoData.title : 'MyTube Premium',
+                    artist: 'กำลังเล่น',
+                    artwork: [{ src: `https://img.youtube.com/vi/${videoData.videoId}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }]
+                });
+
+                navigator.mediaSession.setActionHandler('nexttrack', playNext);
+                navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+            }
+        }
+
+        // 🌟 Pro Tip: ลงทะเบียน Service Worker สำหรับ PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
