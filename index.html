@@ -133,7 +133,7 @@
             const query = document.getElementById('searchInput').value;
             if (!query) return;
             
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${encodeURIComponent(query)}&type=video&key=${YT_API_KEY}`;
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${YT_API_KEY}`;
             const res = await fetch(url);
             const data = await res.json();
             
