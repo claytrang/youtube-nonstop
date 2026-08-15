@@ -1,8 +1,0 @@
-/* 🌟 ระบบป้ายแจ้งเตือน (Toast) ลอยขึ้นแล้วหายไปเอง */
-        #toast {
-            visibility: hidden; min-width: 250px; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.3s, bottom 0.3s; font-weight: bold;
-        }
-        #toast.show { visibility: visible; opacity: 1; bottom: 80px; }
-        #toast.success { background-color: #28a745; border: 1px solid #1e7e34; }
-        #toast.error { background-color: #cc0000; border: 1px solid #8a0000; }
-        #toast.loading { background-color: #333; border: 1px solid #555; }
