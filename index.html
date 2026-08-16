@@ -8,13 +8,14 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a1a">
     <style>
-        body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        /* 🌟 โครงสร้างหลัก (ปรับให้รองรับ Smart TV เลื่อนหน้าจอได้) */
+        body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
         
-        #player-container { width: 100%; aspect-ratio: 16/9; background: #000; flex-shrink: 0; }
+        #player-container { width: 100%; max-width: 1200px; margin: 0 auto; aspect-ratio: 16/9; background: #000; flex-shrink: 0; max-height: 65vh; }
         iframe { width: 100%; height: 100%; border: none; }
         
         /* 🌟 แผงควบคุมเครื่องเล่น */
-        .player-controls { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; background: #111; flex-shrink: 0; border-bottom: 1px solid #333; }
+        .player-controls { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; background: #111; flex-shrink: 0; border-bottom: 1px solid #333; flex-wrap: wrap; }
         .player-controls button { background: #333; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .player-controls button:active { transform: scale(0.95); }
         .player-controls button.active { background: #cc0000; }
@@ -32,8 +33,8 @@
         .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom: 3px solid #cc0000; color: #cc0000; }
         
-        /* 🌟 รายการเพลง */
-        .list-container { flex: 1; overflow-y: auto; padding: 10px; }
+        /* 🌟 รายการเพลง (ปรับให้ใช้รีโมตทีวีกดเลื่อนลงได้ง่าย) */
+        .list-container { flex: 1; padding: 10px; padding-bottom: 80px; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #222; margin-bottom: 8px; border-radius: 8px; }
         .item-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; cursor: pointer; }
         .item-title.playing { color: #cc0000; font-weight: bold; }
@@ -284,7 +285,6 @@
             
             showToast("⏳ กำลังค้นหา...", "loading");
             
-            // ตั้งค่า maxResults เป็น 50 เพื่อดึงผลลัพธ์ให้มากขึ้น
             const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${YT_API_KEY}`;
             
             try {
@@ -346,7 +346,10 @@
 
         // 🌟 ระบบดาวน์โหลด MP4 (ผ่าน API ภายนอก)
         function downloadCurrentVideo() {
-            if (!player) return alert("ยังไม่ได้เปิดวิดีโอ");
+            if (!player) {
+                showToast("⚠️ ยังไม่ได้เปิดวิดีโอ", "error");
+                return;
+            }
             const urlData = player.getVideoUrl();
             const videoId = urlData.split('v=')[1];
             if (videoId) {
