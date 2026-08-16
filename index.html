@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a1a">
     <style>
-        /* 🌟 โครงสร้างหลัก (ปรับให้รองรับ Smart TV เลื่อนหน้าจอได้) */
+        /* 🌟 โครงสร้างหลัก (รองรับ Smart TV เลื่อนหน้าจอได้) */
         body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
         
         #player-container { width: 100%; max-width: 1200px; margin: 0 auto; aspect-ratio: 16/9; background: #000; flex-shrink: 0; max-height: 65vh; }
@@ -33,7 +33,7 @@
         .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom: 3px solid #cc0000; color: #cc0000; }
         
-        /* 🌟 รายการเพลง (ปรับให้ใช้รีโมตทีวีกดเลื่อนลงได้ง่าย) */
+        /* 🌟 รายการเพลง (กดเลื่อนลงด้วยรีโมตทีวีได้ง่าย) */
         .list-container { flex: 1; padding: 10px; padding-bottom: 80px; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #222; margin-bottom: 8px; border-radius: 8px; }
         .item-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; cursor: pointer; }
@@ -98,16 +98,22 @@
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        // 🔴 นำ URL จาก Google Apps Script มาใส่ที่นี่
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbz6-51IwDfAUyPtXgi54xfJcnIR5-xgmiDpphEfJe4AKgPURLjizrbFSSPisOqTbMF_/exec"; 
+        // ==========================================
+        // 🔴 ข้อมูลส่วนตัว (ตั้งค่าให้ถูกต้องก่อนใช้งาน)
+        // ==========================================
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwiASSCP930-Utxd9RyhJ2a8FJUFmayFhYKGJ8-wsVErs44ZYyf9CP83Huo5a2bq-tO/exec"; 
         
-        // 🔴 นำ YouTube Data API v3 Key มาใส่ที่นี่
+        // ⚠️ ใช้ API Key อันใหม่ ห้ามใช้อันที่โดน GitHub แจ้งเตือน!
         const YT_API_KEY = "AIzaSyA5CKvOp2Kp_6GaZNm_Nvpxv3sNzTWFSCI"; 
+        
+        // 🌟 รหัสผ่านฐานข้อมูล (ต้องตรงกับใน Google Apps Script)
+        const GAS_TOKEN = "KARAOKE_VIP_9999"; 
+        // ==========================================
 
         let player;
         let currentPlaylist = [];
         let currentIndex = -1;
-        let currentMode = 'playlist'; // 'playlist' หรือ 'search'
+        let currentMode = 'playlist'; 
         
         // ตัวแปรสถานะการเล่น
         let isShuffle = false;
@@ -231,7 +237,7 @@
             }
         }
 
-        // 🌟 จัดการฐานข้อมูลเพลย์ลิสต์ (Google Sheets)
+        // 🌟 จัดการฐานข้อมูลเพลย์ลิสต์ (Google Sheets API พร้อม Token ป้องกันภัย)
         async function fetchPlaylist() {
             try {
                 const res = await fetch(GAS_URL);
@@ -250,7 +256,8 @@
             try {
                 const res = await fetch(GAS_URL, { 
                     method: 'POST', 
-                    body: JSON.stringify({ action: 'add', videoId, title }) 
+                    // 🌟 แนบ Token รหัสผ่านไปพร้อมกับคำสั่งเพิ่มเพลง
+                    body: JSON.stringify({ action: 'add', videoId: videoId, title: title, token: GAS_TOKEN }) 
                 });
                 const data = await res.json();
                 
@@ -260,7 +267,7 @@
                     showToast("✅ เพิ่มเรียบร้อย!", "success");
                     fetchPlaylist(); 
                 } else {
-                    showToast("❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
+                    showToast(data.message || "❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
                 }
             } catch (error) {
                 showToast("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ", "error");
@@ -270,11 +277,21 @@
         async function removeFromPlaylist(videoId) {
             showToast("🗑️ กำลังลบเพลง...", "loading");
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'remove', videoId }) });
-                showToast("✅ ลบเรียบร้อย!", "success");
-                fetchPlaylist();
+                const res = await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    // 🌟 แนบ Token รหัสผ่านไปพร้อมกับคำสั่งลบเพลง
+                    body: JSON.stringify({ action: 'remove', videoId: videoId, token: GAS_TOKEN }) 
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    showToast("✅ ลบเรียบร้อย!", "success");
+                    fetchPlaylist();
+                } else {
+                    showToast(data.message || "❌ ลบไม่สำเร็จ", "error");
+                }
             } catch (error) {
-                showToast("❌ ลบไม่สำเร็จ", "error");
+                showToast("❌ ลบไม่สำเร็จ ขัดข้องทางเครือข่าย", "error");
             }
         }
 
