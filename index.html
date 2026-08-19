@@ -43,7 +43,7 @@
         #toast.error { background-color: #cc0000; border: 1px solid #8a0000; }
         #toast.loading { background-color: #333; border: 1px solid #555; }
 
-        /* 🌟 CSS สำหรับ Modal ป๊อปอัปย้ายเพลง */
+        /* CSS สำหรับ Modal ป๊อปอัปย้ายเพลง */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; }
         .modal-content { background: #222; padding: 25px; border-radius: 12px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #444; }
         .modal-content select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; background: #111; color: white; border: 1px solid #555; font-size: 16px; outline: none;}
@@ -92,7 +92,7 @@
     <div class="list-container" id="list-area"></div>
     <div id="toast"></div>
 
-    <!-- 🌟 ส่วนของหน้าต่างป๊อปอัปย้ายเพลง (ซ่อนไว้ก่อน) -->
+    <!-- ส่วนของหน้าต่างป๊อปอัปย้ายเพลง -->
     <div class="modal-overlay" id="transferModal">
         <div class="modal-content">
             <h3 style="margin:0 0 10px 0; color:#fff;">ย้าย / ก๊อปปี้เพลง</h3>
@@ -111,8 +111,8 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxShUWC6wbJwUZ_WKM8am98InnPgnAL2czeFcqY9jmpckwl8NEErnPBnUmJHg1x-i2B/exec"; 
-        const GAS_TOKEN = "KARAOKE_VIP_9999"; 
+        const GAS_URL = "YOUR_WEB_APP_URL_HERE"; 
+        const GAS_TOKEN = "https://script.google.com/macros/s/AKfycbxShUWC6wbJwUZ_WKM8am98InnPgnAL2czeFcqY9jmpckwl8NEErnPBnUmJHg1x-i2B/exec"; 
         // ==========================================
 
         let player;
@@ -122,15 +122,15 @@
         let isShuffle = false;
         let repeatMode = 0;
         
-        let allPlaylists = []; // เก็บชื่อเพลย์ลิสต์ทั้งหมด
+        let allPlaylists = []; 
         let activePlaylistName = ""; 
-        let transferData = null; // เก็บข้อมูลเพลงที่กำลังจะกดส่ง
+        let transferData = null; 
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById("toast");
             toast.innerText = message;
             toast.className = `show ${type}`; 
-            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3000); 
+            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3500); 
         }
 
         function onYouTubeIframeAPIReady() {
@@ -223,7 +223,7 @@
                 const data = await res.json();
                 
                 if (data.status === 'success') {
-                    allPlaylists = data.playlists; // เก็บข้อมูลทั้งหมดไว้ใช้ในหน้าต่าง Modal
+                    allPlaylists = data.playlists; 
                     activePlaylistName = data.current;
                     currentPlaylist = data.data;
                     
@@ -268,11 +268,7 @@
             } catch (error) { showToast("❌ ขัดข้องทางเครือข่าย", "error"); }
         }
 
-        // =====================================
-        // 🌟 ระบบ Popup ย้ายเพลง
-        // =====================================
         function openTransferModal(videoId, title) {
-            // เช็คว่ามีเพลย์ลิสต์มากกว่า 1 อันหรือไม่
             const targets = allPlaylists.filter(name => name !== activePlaylistName);
             if (targets.length === 0) {
                 showToast("⚠️ คุณต้องสร้างแฟ้มใหม่อย่างน้อย 1 แฟ้มก่อนถึงจะย้ายได้", "error");
@@ -299,6 +295,7 @@
             transferData = null;
         }
 
+        // 🌟 อัปเกรดระบบ X-Ray เพื่อดัก Error แบบชัดเจน
         async function submitTransfer(mode) {
             if (!transferData) return;
             const targetName = document.getElementById('targetPlaylistSelect').value;
@@ -321,18 +318,26 @@
                         token: GAS_TOKEN 
                     })
                 });
-                const data = await res.json();
                 
-                if (data.status === 'success') {
-                    showToast(`✅ ${actionText}สำเร็จ!`, "success");
-                    if (mode === 'move') {
-                        // ถ้าย้ายขาด ให้โหลดรายการเพลงของหน้าปัจจุบันใหม่
-                        fetchPlaylist(activePlaylistName);
+                const responseText = await res.text();
+                
+                try {
+                    const data = JSON.parse(responseText);
+                    if (data.status === 'success') {
+                        showToast(`✅ ${actionText}สำเร็จ!`, "success");
+                        if (mode === 'move') {
+                            fetchPlaylist(activePlaylistName);
+                        }
+                    } else {
+                        showToast("❌ " + data.message, "error");
                     }
-                } else {
-                    showToast("❌ " + data.message, "error");
+                } catch (jsonError) {
+                    showToast("❌ หลังบ้านล่ม: " + responseText.substring(0, 40) + "...", "error");
                 }
-            } catch (error) { showToast("❌ ขัดข้องทางเครือข่าย", "error"); }
+                
+            } catch (error) { 
+                showToast("❌ ขัดข้อง: " + error.message, "error"); 
+            }
         }
 
         async function addToPlaylist(videoId, title) {
@@ -388,7 +393,6 @@
                 actionBtns.className = 'action-btns';
                 
                 if (isPlaylist) {
-                    // 🌟 เพิ่มปุ่ม "ย้าย" เข้าไปข้างๆ ปุ่มลบ
                     actionBtns.innerHTML = `
                         <button style="background:#007bff;" onclick="openTransferModal('${item.videoId}', '${item.title.replace(/'/g, "").replace(/"/g, "")}')">🔄</button>
                         <button style="background:#555;" onclick="removeFromPlaylist('${item.videoId}')">🗑️</button>
