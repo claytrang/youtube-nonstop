@@ -125,8 +125,9 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
+        // 🔴 นำ URL ของ Apps Script มาใส่ตรงนี้
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyMwh-gDWXqn5dV9KAvv0a2sqv7OGuM6-65PWC0Zj9-I87oTS0eESA7GoBIZNnY-w_B/exec"; 
-        // 🌟 ตั้งให้ว่างเปล่าไว้ ระบบจะดึงรหัสจากที่ผู้ใช้พิมพ์มาใส่แทน
+        
         let GAS_TOKEN = ""; 
         // ==========================================
 
@@ -140,12 +141,10 @@
         let activePlaylistName = ""; 
         let transferData = null; 
 
-        // 🌟 ดักจับการกดปุ่ม Enter ที่หน้า Login
         document.getElementById("pinInput").addEventListener("keypress", function(event) {
             if (event.key === "Enter") { event.preventDefault(); checkPin(); }
         });
 
-        // 🌟 ฟังก์ชันตรวจสอบรหัสผ่าน
         async function checkPin() {
             const pin = document.getElementById("pinInput").value;
             if (!pin) return;
@@ -153,7 +152,6 @@
             errorDiv.innerText = "⏳ กำลังตรวจสอบ...";
             
             try {
-                // ยิงรหัสไปตรวจสอบกับ Google Apps Script
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'load', playlistName: "", token: pin })
@@ -162,13 +160,11 @@
                 
                 if (data.status === 'error' && data.message.includes('Unauthorized')) {
                     errorDiv.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
-                    document.getElementById("pinInput").value = ""; // ล้างช่องใส่รหัส
+                    document.getElementById("pinInput").value = ""; 
                 } else if (data.status === 'success') {
-                    // ถ้ารหัสถูก ให้บันทึกรหัสไว้ และซ่อนหน้าต่าง Login
                     GAS_TOKEN = pin; 
                     document.getElementById("login-screen").style.display = "none";
                     
-                    // โหลดเพลย์ลิสต์ขึ้นมาแสดง
                     allPlaylists = data.playlists; 
                     activePlaylistName = data.current;
                     currentPlaylist = data.data;
@@ -205,7 +201,6 @@
                 playerVars: { 'autoplay': 1, 'controls': 1, 'playsinline': 1 },
                 events: { 'onStateChange': onPlayerStateChange }
             });
-            // 🌟 ลบ fetchPlaylist(); ออก เพราะระบบจะโหลดเพลงก็ต่อเมื่อใส่รหัสผ่านถูกเท่านั้น
         }
 
         function onPlayerStateChange(event) {
@@ -315,17 +310,34 @@
 
         function closeTransferModal() { document.getElementById('transferModal').style.display = 'none'; transferData = null; }
 
+        // 🌟 แก้ไขบั๊กเรื่องลำดับการดึงตัวแปรเรียบร้อยแล้ว
         async function submitTransfer(mode) {
             if (!transferData) return;
             const targetName = document.getElementById('targetPlaylistSelect').value;
             if (!targetName) return;
+            
+            // 🌟 1. ดึงข้อมูลออกมาเก็บในตัวแปรชั่วคราวก่อน
+            const safeVideoId = transferData.videoId;
+            const safeTitle = transferData.title;
+
+            // 🌟 2. ปิดหน้าต่าง (ซึ่งจะเคลียร์ค่าเก่าทิ้ง)
             closeTransferModal();
+            
             const actionText = mode === 'move' ? 'ย้าย' : 'ก๊อปปี้';
             showToast(`⏳ กำลัง${actionText}เพลง...`, "loading");
+            
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'transfer', mode: mode, videoId: transferData.videoId, title: transferData.title, sourcePlaylist: activePlaylistName, targetPlaylist: targetName, token: GAS_TOKEN })
+                    body: JSON.stringify({ 
+                        action: 'transfer', 
+                        mode: mode, 
+                        videoId: safeVideoId,  // 🌟 ใช้ตัวแปรที่เราเก็บไว้
+                        title: safeTitle,      // 🌟 ใช้ตัวแปรที่เราเก็บไว้
+                        sourcePlaylist: activePlaylistName, 
+                        targetPlaylist: targetName, 
+                        token: GAS_TOKEN 
+                    })
                 });
                 const responseText = await res.text();
                 try {
