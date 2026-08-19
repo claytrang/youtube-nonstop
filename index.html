@@ -23,6 +23,9 @@
         button.action-btn { padding: 12px 15px; border-radius: 8px; border: none; background: #cc0000; color: white; font-weight: bold; cursor: pointer; }
         button.dl-btn { background: #28a745; }
         
+        .playlist-manager { padding: 10px; background: #1a1a1a; display: flex; gap: 10px; border-bottom: 1px solid #333; }
+        .playlist-manager select { flex: 1; padding: 12px; border-radius: 8px; background: #333; color: white; border: none; font-size: 14px; font-weight: bold; outline: none; cursor: pointer; }
+        
         .tabs { display: flex; background: #1a1a1a; flex-shrink: 0;}
         .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom: 3px solid #cc0000; color: #cc0000; }
@@ -32,18 +35,23 @@
         .item-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; cursor: pointer; }
         .item-title.playing { color: #cc0000; font-weight: bold; }
         .action-btns { display: flex; gap: 5px; }
-        .action-btns button { padding: 8px; font-size: 12px; border: none; color: white; border-radius: 4px; cursor: pointer; }
+        .action-btns button { padding: 8px; font-size: 12px; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: bold;}
 
-        #toast {
-            visibility: hidden; min-width: 250px; color: #fff; text-align: center; border-radius: 8px; padding: 12px; 
-            position: fixed; z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%); 
-            font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; 
-            transition: opacity 0.3s, bottom 0.3s; font-weight: bold;
-        }
+        #toast { visibility: hidden; min-width: 250px; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.3s, bottom 0.3s; font-weight: bold; }
         #toast.show { visibility: visible; opacity: 1; bottom: 80px; }
         #toast.success { background-color: #28a745; border: 1px solid #1e7e34; }
         #toast.error { background-color: #cc0000; border: 1px solid #8a0000; }
         #toast.loading { background-color: #333; border: 1px solid #555; }
+
+        /* 🌟 CSS สำหรับ Modal ป๊อปอัปย้ายเพลง */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-content { background: #222; padding: 25px; border-radius: 12px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #444; }
+        .modal-content select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; background: #111; color: white; border: 1px solid #555; font-size: 16px; outline: none;}
+        .modal-btns { display: flex; gap: 10px; justify-content: space-between; }
+        .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size:14px;}
+        .btn-move { background: #007bff; }
+        .btn-copy { background: #28a745; }
+        .btn-cancel { background: #555; }
     </style>
 </head>
 <body>
@@ -59,11 +67,9 @@
         <button onclick="playNext()">⏭️</button>
         <button id="btn-repeat" onclick="toggleRepeat()">🔁</button>
         <select id="playback-speed" onchange="changeSpeed()">
-            <option value="0.5">0.5x</option>
             <option value="1" selected>1.0x</option>
             <option value="1.25">1.25x</option>
             <option value="1.5">1.5x</option>
-            <option value="2">2.0x</option>
         </select>
     </div>
 
@@ -73,21 +79,39 @@
         <button class="action-btn dl-btn" onclick="downloadCurrentVideo()">📥 MP4</button>
     </div>
 
+    <div class="playlist-manager">
+        <select id="playlist-selector" onchange="changePlaylist()"></select>
+        <button class="action-btn" onclick="createNewPlaylist()" style="background: #007bff;">➕ แฟ้มใหม่</button>
+    </div>
+
     <div class="tabs">
-        <div class="tab active" id="tab-playlist" onclick="switchTab('playlist')">เพลย์ลิสต์ของฉัน</div>
+        <div class="tab active" id="tab-playlist" onclick="switchTab('playlist')">รายการเพลง</div>
         <div class="tab" id="tab-search" onclick="switchTab('search')">ผลการค้นหา</div>
     </div>
 
     <div class="list-container" id="list-area"></div>
     <div id="toast"></div>
 
+    <!-- 🌟 ส่วนของหน้าต่างป๊อปอัปย้ายเพลง (ซ่อนไว้ก่อน) -->
+    <div class="modal-overlay" id="transferModal">
+        <div class="modal-content">
+            <h3 style="margin:0 0 10px 0; color:#fff;">ย้าย / ก๊อปปี้เพลง</h3>
+            <p id="transferSongTitle" style="font-size:14px; color:#aaa; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
+            
+            <select id="targetPlaylistSelect"></select>
+            
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeTransferModal()">ยกเลิก</button>
+                <button class="btn-copy" onclick="submitTransfer('copy')">📋 ก๊อปปี้</button>
+                <button class="btn-move" onclick="submitTransfer('move')">🚀 ย้ายขาด</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
-        // 🔴 นำ URL ของ Apps Script มาใส่ตรงนี้
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzAs74uAS0cXK5hhWxHwfnvp8pbhJqAJeiTjFWTT98thTHr6GjSrOa6BQAgVLxA3JnY/exec"; 
-        
-        // 🌟 รหัสผ่านฐานข้อมูล (ต้องตรงกับใน Apps Script)
         const GAS_TOKEN = "KARAOKE_VIP_9999"; 
         // ==========================================
 
@@ -97,12 +121,16 @@
         let currentMode = 'playlist'; 
         let isShuffle = false;
         let repeatMode = 0;
+        
+        let allPlaylists = []; // เก็บชื่อเพลย์ลิสต์ทั้งหมด
+        let activePlaylistName = ""; 
+        let transferData = null; // เก็บข้อมูลเพลงที่กำลังจะกดส่ง
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById("toast");
             toast.innerText = message;
             toast.className = `show ${type}`; 
-            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3500); // เพิ่มเวลาโชว์ให้อ่าน Error ทัน
+            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3000); 
         }
 
         function onYouTubeIframeAPIReady() {
@@ -131,12 +159,7 @@
             if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
             else player.playVideo();
         }
-
-        function toggleShuffle() {
-            isShuffle = !isShuffle;
-            document.getElementById('btn-shuffle').className = isShuffle ? 'active' : '';
-        }
-
+        function toggleShuffle() { isShuffle = !isShuffle; document.getElementById('btn-shuffle').className = isShuffle ? 'active' : ''; }
         function toggleRepeat() {
             repeatMode = (repeatMode + 1) % 3;
             const btn = document.getElementById('btn-repeat');
@@ -144,23 +167,17 @@
             else if (repeatMode === 1) { btn.className = 'active'; btn.innerText = '🔁'; }
             else { btn.className = 'active'; btn.innerText = '🔂'; }
         }
-
         function changeSpeed() {
             if (player && typeof player.setPlaybackRate === 'function') {
                 const rate = parseFloat(document.getElementById('playback-speed').value);
                 player.setPlaybackRate(rate);
             }
         }
-
         function playNextAuto() {
             if (currentPlaylist.length === 0) return;
-            if (repeatMode === 2) {
-                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
-                return;
-            }
+            if (repeatMode === 2) { playVideo(currentPlaylist[currentIndex].videoId, currentIndex); return; }
             playNext();
         }
-
         function playNext() {
             if (currentPlaylist.length === 0) return;
             if (isShuffle) {
@@ -176,7 +193,6 @@
                 }
             }
         }
-
         function playPrev() {
             if (currentPlaylist.length === 0) return;
             if (isShuffle) {
@@ -190,7 +206,6 @@
                 playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
             }
         }
-
         function playVideo(videoId, index = -1) {
             if (player && videoId) {
                 player.loadVideoById(videoId);
@@ -199,84 +214,160 @@
             }
         }
 
-        async function fetchPlaylist() {
+        async function fetchPlaylist(targetName = "") {
             try {
-                const res = await fetch(GAS_URL);
-                const data = await res.json();
-                if (data.status === 'success') {
-                    currentPlaylist = data.data;
-                    if (currentMode === 'playlist') renderList(currentPlaylist, true);
-                }
-            } catch (error) {
-                console.error("Error fetching playlist:", error);
-            }
-        }
-
-        async function addToPlaylist(videoId, title) {
-            showToast("⏳ กำลังตรวจสอบและเพิ่มเพลง...", "loading");
-            try {
-                const res = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: 'add', videoId: videoId, title: title, token: GAS_TOKEN }) 
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'load', playlistName: targetName, token: GAS_TOKEN })
                 });
                 const data = await res.json();
                 
-                if (data.status === 'duplicate') showToast("⚠️ ซ้ำ! มีเพลงนี้ในเพลย์ลิสต์แล้ว", "error");
-                else if (data.status === 'success') { showToast("✅ เพิ่มเรียบร้อย!", "success"); fetchPlaylist(); }
-                else showToast(data.message || "❌ เกิดข้อผิดพลาด", "error");
-            } catch (error) {
-                showToast("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ", "error");
+                if (data.status === 'success') {
+                    allPlaylists = data.playlists; // เก็บข้อมูลทั้งหมดไว้ใช้ในหน้าต่าง Modal
+                    activePlaylistName = data.current;
+                    currentPlaylist = data.data;
+                    
+                    const selector = document.getElementById('playlist-selector');
+                    selector.innerHTML = '';
+                    data.playlists.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.innerText = "📁 " + name;
+                        if (name === activePlaylistName) opt.selected = true;
+                        selector.appendChild(opt);
+                    });
+
+                    if (currentMode === 'playlist') renderList(currentPlaylist, true);
+                }
+            } catch (error) { console.error("Error:", error); }
+        }
+
+        async function changePlaylist() {
+            const name = document.getElementById('playlist-selector').value;
+            showToast("🔄 กำลังโหลดข้อมูล...", "loading");
+            await fetchPlaylist(name);
+            showToast("✅ โหลดสำเร็จ", "success");
+            switchTab('playlist');
+        }
+
+        async function createNewPlaylist() {
+            const newName = prompt("🎵 ตั้งชื่อหมวดหมู่เพลงใหม่ (เช่น เพลงฮิต, เพลงเศร้า):");
+            if (!newName || newName.trim() === "") return;
+
+            showToast("⏳ กำลังสร้างแฟ้มใหม่...", "loading");
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'create_playlist', playlistName: newName, token: GAS_TOKEN })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showToast("✅ สร้างสำเร็จ!", "success");
+                    await fetchPlaylist(newName); 
+                } else { showToast("❌ " + data.message, "error"); }
+            } catch (error) { showToast("❌ ขัดข้องทางเครือข่าย", "error"); }
+        }
+
+        // =====================================
+        // 🌟 ระบบ Popup ย้ายเพลง
+        // =====================================
+        function openTransferModal(videoId, title) {
+            // เช็คว่ามีเพลย์ลิสต์มากกว่า 1 อันหรือไม่
+            const targets = allPlaylists.filter(name => name !== activePlaylistName);
+            if (targets.length === 0) {
+                showToast("⚠️ คุณต้องสร้างแฟ้มใหม่อย่างน้อย 1 แฟ้มก่อนถึงจะย้ายได้", "error");
+                return;
             }
+
+            transferData = { videoId: videoId, title: title };
+            document.getElementById('transferSongTitle').innerText = title;
+            
+            const select = document.getElementById('targetPlaylistSelect');
+            select.innerHTML = '';
+            targets.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.innerText = "➡️ ส่งไปที่: " + name;
+                select.appendChild(opt);
+            });
+            
+            document.getElementById('transferModal').style.display = 'flex';
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transferModal').style.display = 'none';
+            transferData = null;
+        }
+
+        async function submitTransfer(mode) {
+            if (!transferData) return;
+            const targetName = document.getElementById('targetPlaylistSelect').value;
+            if (!targetName) return;
+            
+            closeTransferModal();
+            const actionText = mode === 'move' ? 'ย้าย' : 'ก๊อปปี้';
+            showToast(`⏳ กำลัง${actionText}เพลง...`, "loading");
+            
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        action: 'transfer', 
+                        mode: mode,
+                        videoId: transferData.videoId, 
+                        title: transferData.title, 
+                        sourcePlaylist: activePlaylistName,
+                        targetPlaylist: targetName,
+                        token: GAS_TOKEN 
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    showToast(`✅ ${actionText}สำเร็จ!`, "success");
+                    if (mode === 'move') {
+                        // ถ้าย้ายขาด ให้โหลดรายการเพลงของหน้าปัจจุบันใหม่
+                        fetchPlaylist(activePlaylistName);
+                    }
+                } else {
+                    showToast("❌ " + data.message, "error");
+                }
+            } catch (error) { showToast("❌ ขัดข้องทางเครือข่าย", "error"); }
+        }
+
+        async function addToPlaylist(videoId, title) {
+            showToast(`⏳ กำลังเพิ่มลง ${activePlaylistName}...`, "loading");
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'add', videoId: videoId, title: title, playlistName: activePlaylistName, token: GAS_TOKEN }) });
+                const data = await res.json();
+                if (data.status === 'duplicate') showToast("⚠️ มีเพลงนี้อยู่แล้ว", "error");
+                else if (data.status === 'success') { showToast("✅ เพิ่มเรียบร้อย!", "success"); fetchPlaylist(activePlaylistName); }
+            } catch (error) { showToast("❌ ขัดข้อง", "error"); }
         }
 
         async function removeFromPlaylist(videoId) {
             showToast("🗑️ กำลังลบเพลง...", "loading");
             try {
-                const res = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: 'remove', videoId: videoId, token: GAS_TOKEN }) 
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'remove', videoId: videoId, playlistName: activePlaylistName, token: GAS_TOKEN }) });
                 const data = await res.json();
-                
-                if (data.status === 'success') { showToast("✅ ลบเรียบร้อย!", "success"); fetchPlaylist(); }
-                else showToast(data.message || "❌ ลบไม่สำเร็จ", "error");
-            } catch (error) {
-                showToast("❌ ลบไม่สำเร็จ ขัดข้องทางเครือข่าย", "error");
-            }
+                if (data.status === 'success') { showToast("✅ ลบเรียบร้อย!", "success"); fetchPlaylist(activePlaylistName); }
+            } catch (error) { showToast("❌ ขัดข้อง", "error"); }
         }
 
-        // =====================================
-        // 🌟 ระบบค้นหาแบบ Proxy 
-        // =====================================
         async function searchVideo() {
             const query = document.getElementById('searchInput').value;
             if (!query) return;
-            
             showToast("⏳ กำลังค้นหา...", "loading");
-            
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'search', query: query, token: GAS_TOKEN })
-                });
-                
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'search', query: query, token: GAS_TOKEN }) });
                 const data = await res.json();
-                
                 if (data.status === 'success') {
-                    const searchResults = data.data.items.map(item => ({ 
-                        videoId: item.id.videoId, 
-                        title: item.snippet.title 
-                    }));
+                    const searchResults = data.data.items.map(item => ({ videoId: item.id.videoId, title: item.snippet.title }));
                     switchTab('search');
                     renderList(searchResults, false);
                     showToast("✅ ค้นหาสำเร็จ", "success");
-                } else {
-                    // 🔴 โชว์ข้อความ Error จริงๆ จาก Google บนป้ายลอย
-                    showToast("❌ " + (data.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์"), "error");
-                }
-            } catch (error) {
-                showToast("❌ ค้นหาล้มเหลว ตรวจสอบอินเทอร์เน็ตของคุณ", "error");
-            }
+                } else showToast("❌ " + (data.message || "เกิดข้อผิดพลาด"), "error");
+            } catch (error) { showToast("❌ ขัดข้อง", "error"); }
         }
 
         function renderList(items, isPlaylist) {
@@ -297,9 +388,13 @@
                 actionBtns.className = 'action-btns';
                 
                 if (isPlaylist) {
-                    actionBtns.innerHTML = `<button style="background:#555;" onclick="removeFromPlaylist('${item.videoId}')">🗑️</button>`;
+                    // 🌟 เพิ่มปุ่ม "ย้าย" เข้าไปข้างๆ ปุ่มลบ
+                    actionBtns.innerHTML = `
+                        <button style="background:#007bff;" onclick="openTransferModal('${item.videoId}', '${item.title.replace(/'/g, "").replace(/"/g, "")}')">🔄</button>
+                        <button style="background:#555;" onclick="removeFromPlaylist('${item.videoId}')">🗑️</button>
+                    `;
                 } else {
-                    actionBtns.innerHTML = `<button style="background:#007bff;" onclick="addToPlaylist('${item.videoId}', '${item.title.replace(/'/g, "")}')">➕ เพิ่ม</button>`;
+                    actionBtns.innerHTML = `<button style="background:#007bff;" onclick="addToPlaylist('${item.videoId}', '${item.title.replace(/'/g, "").replace(/"/g, "")}')">➕ เพิ่ม</button>`;
                 }
 
                 div.appendChild(titleDiv);
@@ -319,10 +414,7 @@
             if (!player) { showToast("⚠️ ยังไม่ได้เปิดวิดีโอ", "error"); return; }
             const urlData = player.getVideoUrl();
             const videoId = urlData.split('v=')[1];
-            if (videoId) {
-                const downloadUrl = `https://loader.to/api/button/?url=https://www.youtube.com/watch?v=${videoId}&f=mp4`;
-                window.open(downloadUrl, '_blank');
-            }
+            if (videoId) window.open(`https://loader.to/api/button/?url=https://www.youtube.com/watch?v=${videoId}&f=mp4`, '_blank');
         }
 
         function setupMediaSession() {
