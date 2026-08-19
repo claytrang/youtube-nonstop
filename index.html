@@ -4,36 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MyTube Premium</title>
-    <!-- 🌟 PWA Manifest สำหรับการติดตั้งเป็นแอป -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a1a1a">
     <style>
-        /* 🌟 โครงสร้างหลัก (รองรับ Smart TV เลื่อนหน้าจอได้) */
         body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
-        
         #player-container { width: 100%; max-width: 1200px; margin: 0 auto; aspect-ratio: 16/9; background: #000; flex-shrink: 0; max-height: 65vh; }
         iframe { width: 100%; height: 100%; border: none; }
         
-        /* 🌟 แผงควบคุมเครื่องเล่น */
         .player-controls { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 10px; background: #111; flex-shrink: 0; border-bottom: 1px solid #333; flex-wrap: wrap; }
         .player-controls button { background: #333; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .player-controls button:active { transform: scale(0.95); }
         .player-controls button.active { background: #cc0000; }
         .player-controls select { background: #333; color: white; border: 1px solid #555; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; outline: none; }
         
-        /* 🌟 แถบค้นหาและดาวน์โหลด */
         .controls { padding: 10px; background: #1a1a1a; display: flex; gap: 10px; flex-shrink: 0; }
         input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #333; color: white; font-size: 16px; outline: none; }
         input:focus { border: 1px solid #cc0000; }
         button.action-btn { padding: 12px 15px; border-radius: 8px; border: none; background: #cc0000; color: white; font-weight: bold; cursor: pointer; }
         button.dl-btn { background: #28a745; }
         
-        /* 🌟 แท็บเมนู */
         .tabs { display: flex; background: #1a1a1a; flex-shrink: 0;}
         .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom: 3px solid #cc0000; color: #cc0000; }
         
-        /* 🌟 รายการเพลง (กดเลื่อนลงด้วยรีโมตทีวีได้ง่าย) */
         .list-container { flex: 1; padding: 10px; padding-bottom: 80px; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #222; margin-bottom: 8px; border-radius: 8px; }
         .item-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; cursor: pointer; }
@@ -41,7 +34,6 @@
         .action-btns { display: flex; gap: 5px; }
         .action-btns button { padding: 8px; font-size: 12px; border: none; color: white; border-radius: 4px; cursor: pointer; }
 
-        /* 🌟 ระบบป้ายแจ้งเตือน (Toast) */
         #toast {
             visibility: hidden; min-width: 250px; color: #fff; text-align: center; border-radius: 8px; padding: 12px; 
             position: fixed; z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%); 
@@ -56,12 +48,10 @@
 </head>
 <body>
 
-    <!-- พื้นที่เล่นวิดีโอ -->
     <div id="player-container">
         <div id="ytplayer"></div>
     </div>
 
-    <!-- แผงปุ่มควบคุมการเล่น -->
     <div class="player-controls">
         <button id="btn-shuffle" onclick="toggleShuffle()">🔀</button>
         <button onclick="playPrev()">⏮️</button>
@@ -77,36 +67,28 @@
         </select>
     </div>
 
-    <!-- แถบค้นหาและดาวน์โหลด -->
     <div class="controls">
         <input type="text" id="searchInput" placeholder="ค้นหาเพลง / วิดีโอ...">
         <button class="action-btn" onclick="searchVideo()">🔍</button>
         <button class="action-btn dl-btn" onclick="downloadCurrentVideo()">📥 MP4</button>
     </div>
 
-    <!-- แท็บเปลี่ยนหน้า -->
     <div class="tabs">
         <div class="tab active" id="tab-playlist" onclick="switchTab('playlist')">เพลย์ลิสต์ของฉัน</div>
         <div class="tab" id="tab-search" onclick="switchTab('search')">ผลการค้นหา</div>
     </div>
 
-    <!-- พื้นที่แสดงรายชื่อเพลง -->
     <div class="list-container" id="list-area"></div>
 
-    <!-- กล่องแจ้งเตือน (Toast) -->
     <div id="toast"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
-        // 🔴 ข้อมูลส่วนตัว (ตั้งค่าให้ถูกต้องก่อนใช้งาน)
-        // ==========================================
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwiASSCP930-Utxd9RyhJ2a8FJUFmayFhYKGJ8-wsVErs44ZYyf9CP83Huo5a2bq-tO/exec"; 
+        // 🔴 นำ URL ของ Apps Script มาใส่ตรงนี้
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNJcZdAAAUoKFH0umaYO2VrAj_wmKrEuaFurUfSVQxkfinOjVfbKUqanuRLVSXbUP1/exec"; 
         
-        // ⚠️ ใช้ API Key อันใหม่ ห้ามใช้อันที่โดน GitHub แจ้งเตือน!
-        const YT_API_KEY = "AIzaSyA5CKvOp2Kp_6GaZNm_Nvpxv3sNzTWFSCI"; 
-        
-        // 🌟 รหัสผ่านฐานข้อมูล (ต้องตรงกับใน Google Apps Script)
+        // 🌟 รหัสผ่านฐานข้อมูล (ต้องตรงกับใน Apps Script)
         const GAS_TOKEN = "KARAOKE_VIP_9999"; 
         // ==========================================
 
@@ -115,22 +97,16 @@
         let currentIndex = -1;
         let currentMode = 'playlist'; 
         
-        // ตัวแปรสถานะการเล่น
         let isShuffle = false;
-        let repeatMode = 0; // 0: ปิด, 1: วนทั้งลิสต์, 2: วนเพลงเดียว
+        let repeatMode = 0;
 
-        // 🌟 ฟังก์ชันแสดงป้ายแจ้งเตือน (Toast)
         function showToast(message, type = 'success') {
             const toast = document.getElementById("toast");
             toast.innerText = message;
             toast.className = `show ${type}`; 
-            
-            setTimeout(() => { 
-                toast.className = toast.className.replace("show", "").trim(); 
-            }, 2500);
+            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 2500);
         }
 
-        // 🌟 ตั้งค่า YouTube Player เริ่มต้น
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('ytplayer', {
                 height: '100%', width: '100%', videoId: '',
@@ -142,22 +118,16 @@
 
         function onPlayerStateChange(event) {
             const playPauseBtn = document.getElementById('btn-playpause');
-            
             if (event.data === YT.PlayerState.PLAYING) {
                 playPauseBtn.innerText = '⏸️';
-                setupMediaSession(); // อัปเดต Lock Screen
-                changeSpeed(); // บังคับความเร็วทุกครั้งที่เริ่มเล่น
+                setupMediaSession();
+                changeSpeed();
             } else {
                 playPauseBtn.innerText = '▶️';
             }
-
-            // ถ้าเล่นจบเพลง
-            if (event.data === YT.PlayerState.ENDED) {
-                playNextAuto();
-            }
+            if (event.data === YT.PlayerState.ENDED) playNextAuto();
         }
 
-        // 🌟 ควบคุมการเล่น
         function togglePlayPause() {
             if (!player) return;
             if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
@@ -184,21 +154,17 @@
             }
         }
 
-        // เล่นเพลงถัดไปอัตโนมัติเมื่อเพลงจบ
         function playNextAuto() {
             if (currentPlaylist.length === 0) return;
-            
             if (repeatMode === 2) {
-                playVideo(currentPlaylist[currentIndex].videoId, currentIndex); // เล่นซ้ำเพลงเดิม
+                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
                 return;
             }
             playNext();
         }
 
-        // กดปุ่มข้ามเพลง (Next)
         function playNext() {
             if (currentPlaylist.length === 0) return;
-
             if (isShuffle) {
                 let nextIndex = Math.floor(Math.random() * currentPlaylist.length);
                 playVideo(currentPlaylist[nextIndex].videoId, nextIndex);
@@ -207,16 +173,14 @@
                     currentIndex++;
                     playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
                 } else if (repeatMode === 1) {
-                    currentIndex = 0; // วนกลับไปเพลงแรก
+                    currentIndex = 0;
                     playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
                 }
             }
         }
 
-        // กดปุ่มกลับไปเพลงก่อนหน้า (Prev)
         function playPrev() {
             if (currentPlaylist.length === 0) return;
-            
             if (isShuffle) {
                 let prevIndex = Math.floor(Math.random() * currentPlaylist.length);
                 playVideo(currentPlaylist[prevIndex].videoId, prevIndex);
@@ -224,7 +188,7 @@
                 currentIndex--;
                 playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
             } else if (repeatMode === 1) {
-                currentIndex = currentPlaylist.length - 1; // ไปเพลงสุดท้าย
+                currentIndex = currentPlaylist.length - 1;
                 playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
             }
         }
@@ -233,11 +197,10 @@
             if (player && videoId) {
                 player.loadVideoById(videoId);
                 currentIndex = index;
-                if (currentMode === 'playlist') renderList(currentPlaylist, true); // รีเฟรชไฮไลต์เพลง
+                if (currentMode === 'playlist') renderList(currentPlaylist, true);
             }
         }
 
-        // 🌟 จัดการฐานข้อมูลเพลย์ลิสต์ (Google Sheets API พร้อม Token ป้องกันภัย)
         async function fetchPlaylist() {
             try {
                 const res = await fetch(GAS_URL);
@@ -256,19 +219,13 @@
             try {
                 const res = await fetch(GAS_URL, { 
                     method: 'POST', 
-                    // 🌟 แนบ Token รหัสผ่านไปพร้อมกับคำสั่งเพิ่มเพลง
                     body: JSON.stringify({ action: 'add', videoId: videoId, title: title, token: GAS_TOKEN }) 
                 });
                 const data = await res.json();
                 
-                if (data.status === 'duplicate') {
-                    showToast("⚠️ ซ้ำ! มีเพลงนี้ในเพลย์ลิสต์แล้ว", "error");
-                } else if (data.status === 'success') {
-                    showToast("✅ เพิ่มเรียบร้อย!", "success");
-                    fetchPlaylist(); 
-                } else {
-                    showToast(data.message || "❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
-                }
+                if (data.status === 'duplicate') showToast("⚠️ ซ้ำ! มีเพลงนี้ในเพลย์ลิสต์แล้ว", "error");
+                else if (data.status === 'success') { showToast("✅ เพิ่มเรียบร้อย!", "success"); fetchPlaylist(); }
+                else showToast(data.message || "❌ เกิดข้อผิดพลาด", "error");
             } catch (error) {
                 showToast("❌ เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ", "error");
             }
@@ -279,50 +236,52 @@
             try {
                 const res = await fetch(GAS_URL, { 
                     method: 'POST', 
-                    // 🌟 แนบ Token รหัสผ่านไปพร้อมกับคำสั่งลบเพลง
                     body: JSON.stringify({ action: 'remove', videoId: videoId, token: GAS_TOKEN }) 
                 });
                 const data = await res.json();
                 
-                if (data.status === 'success') {
-                    showToast("✅ ลบเรียบร้อย!", "success");
-                    fetchPlaylist();
-                } else {
-                    showToast(data.message || "❌ ลบไม่สำเร็จ", "error");
-                }
+                if (data.status === 'success') { showToast("✅ ลบเรียบร้อย!", "success"); fetchPlaylist(); }
+                else showToast(data.message || "❌ ลบไม่สำเร็จ", "error");
             } catch (error) {
                 showToast("❌ ลบไม่สำเร็จ ขัดข้องทางเครือข่าย", "error");
             }
         }
 
-        // 🌟 ระบบค้นหา (YouTube API - ดึง 50 รายการ)
+        // =====================================
+        // 🌟 ระบบค้นหาแบบใหม่ (ส่งไปให้ GAS ค้นหาแทน)
+        // =====================================
         async function searchVideo() {
             const query = document.getElementById('searchInput').value;
             if (!query) return;
             
             showToast("⏳ กำลังค้นหา...", "loading");
             
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&q=${encodeURIComponent(query)}&type=video&key=${YT_API_KEY}`;
-            
             try {
-                const res = await fetch(url);
+                // ส่งคำสั่งค้นหาไปที่เซิร์ฟเวอร์
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'search', query: query, token: GAS_TOKEN })
+                });
+                
                 const data = await res.json();
                 
-                if (data.error) {
-                    showToast("❌ โควตาการค้นหา API เต็ม หรือตั้งค่า Key ผิด", "error");
-                    return;
+                if (data.status === 'success') {
+                    // แกะข้อมูลที่เซิร์ฟเวอร์ส่งกลับมา
+                    const searchResults = data.data.items.map(item => ({ 
+                        videoId: item.id.videoId, 
+                        title: item.snippet.title 
+                    }));
+                    switchTab('search');
+                    renderList(searchResults, false);
+                    showToast("✅ ค้นหาสำเร็จ", "success");
+                } else {
+                    showToast("❌ " + (data.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์"), "error");
                 }
-                
-                const searchResults = data.items.map(item => ({ videoId: item.id.videoId, title: item.snippet.title }));
-                switchTab('search');
-                renderList(searchResults, false);
-                showToast("✅ ค้นหาสำเร็จ", "success");
             } catch (error) {
                 showToast("❌ ค้นหาล้มเหลว ตรวจสอบอินเทอร์เน็ตของคุณ", "error");
             }
         }
 
-        // 🌟 ระบบแสดงผล UI รายการ
         function renderList(items, isPlaylist) {
             const container = document.getElementById('list-area');
             container.innerHTML = '';
@@ -333,9 +292,7 @@
                 
                 const titleDiv = document.createElement('div');
                 titleDiv.className = 'item-title';
-                
                 if (isPlaylist && index === currentIndex) titleDiv.classList.add('playing');
-                
                 titleDiv.innerText = item.title;
                 titleDiv.onclick = () => playVideo(item.videoId, isPlaylist ? index : -1);
                 
@@ -361,12 +318,8 @@
             if (mode === 'playlist') renderList(currentPlaylist, true);
         }
 
-        // 🌟 ระบบดาวน์โหลด MP4 (ผ่าน API ภายนอก)
         function downloadCurrentVideo() {
-            if (!player) {
-                showToast("⚠️ ยังไม่ได้เปิดวิดีโอ", "error");
-                return;
-            }
+            if (!player) { showToast("⚠️ ยังไม่ได้เปิดวิดีโอ", "error"); return; }
             const urlData = player.getVideoUrl();
             const videoId = urlData.split('v=')[1];
             if (videoId) {
@@ -375,7 +328,6 @@
             }
         }
 
-        // 🌟 Media Session API (แสดงผลบน Lock Screen)
         function setupMediaSession() {
             if ('mediaSession' in navigator && currentIndex >= 0) {
                 const videoData = currentPlaylist[currentIndex];
@@ -389,10 +341,7 @@
             }
         }
 
-        // 🌟 การลงทะเบียน Service Worker สำหรับ PWA
-        if ('serviceWorker' in navigator) { 
-            navigator.serviceWorker.register('sw.js'); 
-        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
