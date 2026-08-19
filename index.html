@@ -79,14 +79,13 @@
     </div>
 
     <div class="list-container" id="list-area"></div>
-
     <div id="toast"></div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
         // 🔴 นำ URL ของ Apps Script มาใส่ตรงนี้
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNJcZdAAAUoKFH0umaYO2VrAj_wmKrEuaFurUfSVQxkfinOjVfbKUqanuRLVSXbUP1/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzrUrdvfidK9NdcGgbazBs9c0UQOznFz-ZMVaQHvnw1O9wf6BHsvu5Iw6YIiW_TfEFD/exec"; 
         
         // 🌟 รหัสผ่านฐานข้อมูล (ต้องตรงกับใน Apps Script)
         const GAS_TOKEN = "KARAOKE_VIP_9999"; 
@@ -96,7 +95,6 @@
         let currentPlaylist = [];
         let currentIndex = -1;
         let currentMode = 'playlist'; 
-        
         let isShuffle = false;
         let repeatMode = 0;
 
@@ -104,7 +102,7 @@
             const toast = document.getElementById("toast");
             toast.innerText = message;
             toast.className = `show ${type}`; 
-            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 2500);
+            setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3500); // เพิ่มเวลาโชว์ให้อ่าน Error ทัน
         }
 
         function onYouTubeIframeAPIReady() {
@@ -248,7 +246,7 @@
         }
 
         // =====================================
-        // 🌟 ระบบค้นหาแบบใหม่ (ส่งไปให้ GAS ค้นหาแทน)
+        // 🌟 ระบบค้นหาแบบ Proxy 
         // =====================================
         async function searchVideo() {
             const query = document.getElementById('searchInput').value;
@@ -257,7 +255,6 @@
             showToast("⏳ กำลังค้นหา...", "loading");
             
             try {
-                // ส่งคำสั่งค้นหาไปที่เซิร์ฟเวอร์
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'search', query: query, token: GAS_TOKEN })
@@ -266,7 +263,6 @@
                 const data = await res.json();
                 
                 if (data.status === 'success') {
-                    // แกะข้อมูลที่เซิร์ฟเวอร์ส่งกลับมา
                     const searchResults = data.data.items.map(item => ({ 
                         videoId: item.id.videoId, 
                         title: item.snippet.title 
@@ -275,6 +271,7 @@
                     renderList(searchResults, false);
                     showToast("✅ ค้นหาสำเร็จ", "success");
                 } else {
+                    // 🔴 โชว์ข้อความ Error จริงๆ จาก Google บนป้ายลอย
                     showToast("❌ " + (data.message || "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์"), "error");
                 }
             } catch (error) {
