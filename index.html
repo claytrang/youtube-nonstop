@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MyTube Premium</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a1a">
+    <meta name="theme-color" content="#121212">
     <style>
         body { margin: 0; background-color: #121212; color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        /* 🌟 CSS สำหรับหน้า Login */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #121212; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #login-screen h1 { color: #fff; margin-bottom: 10px; font-size: 28px;}
+        #login-screen p { color: #aaa; margin: 0 0 20px 0; }
+        #login-screen input { text-align: center; font-size: 24px; padding: 15px; width: 80%; max-width: 250px; letter-spacing: 5px; border-radius: 12px; border: 2px solid #333; background: #222; color: white; outline: none; transition: 0.3s;}
+        #login-screen input:focus { border-color: #cc0000; }
+        #login-screen button { margin-top: 20px; padding: 12px 40px; font-size: 18px; border-radius: 8px; background: #cc0000; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        #login-screen button:active { transform: scale(0.95); }
+        
         #player-container { width: 100%; max-width: 1200px; margin: 0 auto; aspect-ratio: 16/9; background: #000; flex-shrink: 0; max-height: 65vh; }
         iframe { width: 100%; height: 100%; border: none; }
         
@@ -43,7 +53,6 @@
         #toast.error { background-color: #cc0000; border: 1px solid #8a0000; }
         #toast.loading { background-color: #333; border: 1px solid #555; }
 
-        /* CSS สำหรับ Modal ป๊อปอัปย้ายเพลง */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; }
         .modal-content { background: #222; padding: 25px; border-radius: 12px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #444; }
         .modal-content select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; background: #111; color: white; border: 1px solid #555; font-size: 16px; outline: none;}
@@ -56,9 +65,17 @@
 </head>
 <body>
 
-    <div id="player-container">
-        <div id="ytplayer"></div>
+    <!-- 🌟 หน้าจอ Login จะแสดงขึ้นมาบังทุกอย่างก่อน -->
+    <div id="login-screen">
+        <h1>MyTube Premium</h1>
+        <p>กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</p>
+        <input type="password" id="pinInput" maxlength="6" placeholder="******">
+        <button onclick="checkPin()">เข้าสู่ระบบ</button>
+        <div id="loginError" style="color:#ff4444; margin-top:15px; font-size:14px; font-weight:bold;"></div>
     </div>
+
+    <!-- ส่วนเนื้อหาแอปหลัก -->
+    <div id="player-container"><div id="ytplayer"></div></div>
 
     <div class="player-controls">
         <button id="btn-shuffle" onclick="toggleShuffle()">🔀</button>
@@ -92,14 +109,11 @@
     <div class="list-container" id="list-area"></div>
     <div id="toast"></div>
 
-    <!-- ส่วนของหน้าต่างป๊อปอัปย้ายเพลง -->
     <div class="modal-overlay" id="transferModal">
         <div class="modal-content">
             <h3 style="margin:0 0 10px 0; color:#fff;">ย้าย / ก๊อปปี้เพลง</h3>
             <p id="transferSongTitle" style="font-size:14px; color:#aaa; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
-            
             <select id="targetPlaylistSelect"></select>
-            
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="closeTransferModal()">ยกเลิก</button>
                 <button class="btn-copy" onclick="submitTransfer('copy')">📋 ก๊อปปี้</button>
@@ -111,8 +125,9 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
         // ==========================================
-        const GAS_URL = "YOUR_WEB_APP_URL_HERE"; 
-        const GAS_TOKEN = "https://script.google.com/macros/s/AKfycbxShUWC6wbJwUZ_WKM8am98InnPgnAL2czeFcqY9jmpckwl8NEErnPBnUmJHg1x-i2B/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyMwh-gDWXqn5dV9KAvv0a2sqv7OGuM6-65PWC0Zj9-I87oTS0eESA7GoBIZNnY-w_B/exec"; 
+        // 🌟 ตั้งให้ว่างเปล่าไว้ ระบบจะดึงรหัสจากที่ผู้ใช้พิมพ์มาใส่แทน
+        let GAS_TOKEN = ""; 
         // ==========================================
 
         let player;
@@ -121,10 +136,61 @@
         let currentMode = 'playlist'; 
         let isShuffle = false;
         let repeatMode = 0;
-        
         let allPlaylists = []; 
         let activePlaylistName = ""; 
         let transferData = null; 
+
+        // 🌟 ดักจับการกดปุ่ม Enter ที่หน้า Login
+        document.getElementById("pinInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); checkPin(); }
+        });
+
+        // 🌟 ฟังก์ชันตรวจสอบรหัสผ่าน
+        async function checkPin() {
+            const pin = document.getElementById("pinInput").value;
+            if (!pin) return;
+            const errorDiv = document.getElementById("loginError");
+            errorDiv.innerText = "⏳ กำลังตรวจสอบ...";
+            
+            try {
+                // ยิงรหัสไปตรวจสอบกับ Google Apps Script
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'load', playlistName: "", token: pin })
+                });
+                const data = await res.json();
+                
+                if (data.status === 'error' && data.message.includes('Unauthorized')) {
+                    errorDiv.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
+                    document.getElementById("pinInput").value = ""; // ล้างช่องใส่รหัส
+                } else if (data.status === 'success') {
+                    // ถ้ารหัสถูก ให้บันทึกรหัสไว้ และซ่อนหน้าต่าง Login
+                    GAS_TOKEN = pin; 
+                    document.getElementById("login-screen").style.display = "none";
+                    
+                    // โหลดเพลย์ลิสต์ขึ้นมาแสดง
+                    allPlaylists = data.playlists; 
+                    activePlaylistName = data.current;
+                    currentPlaylist = data.data;
+                    
+                    const selector = document.getElementById('playlist-selector');
+                    selector.innerHTML = '';
+                    data.playlists.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.innerText = "📁 " + name;
+                        if (name === activePlaylistName) opt.selected = true;
+                        selector.appendChild(opt);
+                    });
+
+                    if (currentMode === 'playlist') renderList(currentPlaylist, true);
+                } else {
+                    errorDiv.innerText = "❌ " + data.message;
+                }
+            } catch (err) {
+                errorDiv.innerText = "❌ ขัดข้องทางเครือข่าย หรือลิงก์ผิด";
+            }
+        }
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById("toast");
@@ -139,18 +205,13 @@
                 playerVars: { 'autoplay': 1, 'controls': 1, 'playsinline': 1 },
                 events: { 'onStateChange': onPlayerStateChange }
             });
-            fetchPlaylist();
+            // 🌟 ลบ fetchPlaylist(); ออก เพราะระบบจะโหลดเพลงก็ต่อเมื่อใส่รหัสผ่านถูกเท่านั้น
         }
 
         function onPlayerStateChange(event) {
             const playPauseBtn = document.getElementById('btn-playpause');
-            if (event.data === YT.PlayerState.PLAYING) {
-                playPauseBtn.innerText = '⏸️';
-                setupMediaSession();
-                changeSpeed();
-            } else {
-                playPauseBtn.innerText = '▶️';
-            }
+            if (event.data === YT.PlayerState.PLAYING) { playPauseBtn.innerText = '⏸️'; setupMediaSession(); changeSpeed(); } 
+            else { playPauseBtn.innerText = '▶️'; }
             if (event.data === YT.PlayerState.ENDED) playNextAuto();
         }
 
@@ -184,13 +245,8 @@
                 let nextIndex = Math.floor(Math.random() * currentPlaylist.length);
                 playVideo(currentPlaylist[nextIndex].videoId, nextIndex);
             } else {
-                if (currentIndex < currentPlaylist.length - 1) {
-                    currentIndex++;
-                    playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
-                } else if (repeatMode === 1) {
-                    currentIndex = 0;
-                    playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
-                }
+                if (currentIndex < currentPlaylist.length - 1) { currentIndex++; playVideo(currentPlaylist[currentIndex].videoId, currentIndex); } 
+                else if (repeatMode === 1) { currentIndex = 0; playVideo(currentPlaylist[currentIndex].videoId, currentIndex); }
             }
         }
         function playPrev() {
@@ -198,13 +254,8 @@
             if (isShuffle) {
                 let prevIndex = Math.floor(Math.random() * currentPlaylist.length);
                 playVideo(currentPlaylist[prevIndex].videoId, prevIndex);
-            } else if (currentIndex > 0) {
-                currentIndex--;
-                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
-            } else if (repeatMode === 1) {
-                currentIndex = currentPlaylist.length - 1;
-                playVideo(currentPlaylist[currentIndex].videoId, currentIndex);
-            }
+            } else if (currentIndex > 0) { currentIndex--; playVideo(currentPlaylist[currentIndex].videoId, currentIndex); } 
+            else if (repeatMode === 1) { currentIndex = currentPlaylist.length - 1; playVideo(currentPlaylist[currentIndex].videoId, currentIndex); }
         }
         function playVideo(videoId, index = -1) {
             if (player && videoId) {
@@ -216,27 +267,15 @@
 
         async function fetchPlaylist(targetName = "") {
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'load', playlistName: targetName, token: GAS_TOKEN })
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'load', playlistName: targetName, token: GAS_TOKEN }) });
                 const data = await res.json();
-                
                 if (data.status === 'success') {
-                    allPlaylists = data.playlists; 
-                    activePlaylistName = data.current;
-                    currentPlaylist = data.data;
-                    
-                    const selector = document.getElementById('playlist-selector');
-                    selector.innerHTML = '';
+                    allPlaylists = data.playlists; activePlaylistName = data.current; currentPlaylist = data.data;
+                    const selector = document.getElementById('playlist-selector'); selector.innerHTML = '';
                     data.playlists.forEach(name => {
-                        const opt = document.createElement('option');
-                        opt.value = name;
-                        opt.innerText = "📁 " + name;
-                        if (name === activePlaylistName) opt.selected = true;
-                        selector.appendChild(opt);
+                        const opt = document.createElement('option'); opt.value = name; opt.innerText = "📁 " + name;
+                        if (name === activePlaylistName) opt.selected = true; selector.appendChild(opt);
                     });
-
                     if (currentMode === 'playlist') renderList(currentPlaylist, true);
                 }
             } catch (error) { console.error("Error:", error); }
@@ -253,91 +292,48 @@
         async function createNewPlaylist() {
             const newName = prompt("🎵 ตั้งชื่อหมวดหมู่เพลงใหม่ (เช่น เพลงฮิต, เพลงเศร้า):");
             if (!newName || newName.trim() === "") return;
-
             showToast("⏳ กำลังสร้างแฟ้มใหม่...", "loading");
             try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'create_playlist', playlistName: newName, token: GAS_TOKEN })
-                });
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'create_playlist', playlistName: newName, token: GAS_TOKEN }) });
                 const data = await res.json();
-                if (data.status === 'success') {
-                    showToast("✅ สร้างสำเร็จ!", "success");
-                    await fetchPlaylist(newName); 
-                } else { showToast("❌ " + data.message, "error"); }
+                if (data.status === 'success') { showToast("✅ สร้างสำเร็จ!", "success"); await fetchPlaylist(newName); } 
+                else { showToast("❌ " + data.message, "error"); }
             } catch (error) { showToast("❌ ขัดข้องทางเครือข่าย", "error"); }
         }
 
         function openTransferModal(videoId, title) {
             const targets = allPlaylists.filter(name => name !== activePlaylistName);
-            if (targets.length === 0) {
-                showToast("⚠️ คุณต้องสร้างแฟ้มใหม่อย่างน้อย 1 แฟ้มก่อนถึงจะย้ายได้", "error");
-                return;
-            }
-
+            if (targets.length === 0) { showToast("⚠️ คุณต้องสร้างแฟ้มใหม่อย่างน้อย 1 แฟ้มก่อนถึงจะย้ายได้", "error"); return; }
             transferData = { videoId: videoId, title: title };
             document.getElementById('transferSongTitle').innerText = title;
-            
-            const select = document.getElementById('targetPlaylistSelect');
-            select.innerHTML = '';
+            const select = document.getElementById('targetPlaylistSelect'); select.innerHTML = '';
             targets.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.innerText = "➡️ ส่งไปที่: " + name;
-                select.appendChild(opt);
+                const opt = document.createElement('option'); opt.value = name; opt.innerText = "➡️ ส่งไปที่: " + name; select.appendChild(opt);
             });
-            
             document.getElementById('transferModal').style.display = 'flex';
         }
 
-        function closeTransferModal() {
-            document.getElementById('transferModal').style.display = 'none';
-            transferData = null;
-        }
+        function closeTransferModal() { document.getElementById('transferModal').style.display = 'none'; transferData = null; }
 
-        // 🌟 อัปเกรดระบบ X-Ray เพื่อดัก Error แบบชัดเจน
         async function submitTransfer(mode) {
             if (!transferData) return;
             const targetName = document.getElementById('targetPlaylistSelect').value;
             if (!targetName) return;
-            
             closeTransferModal();
             const actionText = mode === 'move' ? 'ย้าย' : 'ก๊อปปี้';
             showToast(`⏳ กำลัง${actionText}เพลง...`, "loading");
-            
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ 
-                        action: 'transfer', 
-                        mode: mode,
-                        videoId: transferData.videoId, 
-                        title: transferData.title, 
-                        sourcePlaylist: activePlaylistName,
-                        targetPlaylist: targetName,
-                        token: GAS_TOKEN 
-                    })
+                    body: JSON.stringify({ action: 'transfer', mode: mode, videoId: transferData.videoId, title: transferData.title, sourcePlaylist: activePlaylistName, targetPlaylist: targetName, token: GAS_TOKEN })
                 });
-                
                 const responseText = await res.text();
-                
                 try {
                     const data = JSON.parse(responseText);
-                    if (data.status === 'success') {
-                        showToast(`✅ ${actionText}สำเร็จ!`, "success");
-                        if (mode === 'move') {
-                            fetchPlaylist(activePlaylistName);
-                        }
-                    } else {
-                        showToast("❌ " + data.message, "error");
-                    }
-                } catch (jsonError) {
-                    showToast("❌ หลังบ้านล่ม: " + responseText.substring(0, 40) + "...", "error");
-                }
-                
-            } catch (error) { 
-                showToast("❌ ขัดข้อง: " + error.message, "error"); 
-            }
+                    if (data.status === 'success') { showToast(`✅ ${actionText}สำเร็จ!`, "success"); if (mode === 'move') fetchPlaylist(activePlaylistName); } 
+                    else { showToast("❌ " + data.message, "error"); }
+                } catch (jsonError) { showToast("❌ หลังบ้านล่ม: " + responseText.substring(0, 40) + "...", "error"); }
+            } catch (error) { showToast("❌ ขัดข้อง: " + error.message, "error"); }
         }
 
         async function addToPlaylist(videoId, title) {
@@ -368,30 +364,20 @@
                 const data = await res.json();
                 if (data.status === 'success') {
                     const searchResults = data.data.items.map(item => ({ videoId: item.id.videoId, title: item.snippet.title }));
-                    switchTab('search');
-                    renderList(searchResults, false);
-                    showToast("✅ ค้นหาสำเร็จ", "success");
+                    switchTab('search'); renderList(searchResults, false); showToast("✅ ค้นหาสำเร็จ", "success");
                 } else showToast("❌ " + (data.message || "เกิดข้อผิดพลาด"), "error");
             } catch (error) { showToast("❌ ขัดข้อง", "error"); }
         }
 
         function renderList(items, isPlaylist) {
-            const container = document.getElementById('list-area');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('list-area'); container.innerHTML = '';
             items.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'item';
-                
-                const titleDiv = document.createElement('div');
-                titleDiv.className = 'item-title';
+                const div = document.createElement('div'); div.className = 'item';
+                const titleDiv = document.createElement('div'); titleDiv.className = 'item-title';
                 if (isPlaylist && index === currentIndex) titleDiv.classList.add('playing');
-                titleDiv.innerText = item.title;
-                titleDiv.onclick = () => playVideo(item.videoId, isPlaylist ? index : -1);
+                titleDiv.innerText = item.title; titleDiv.onclick = () => playVideo(item.videoId, isPlaylist ? index : -1);
                 
-                const actionBtns = document.createElement('div');
-                actionBtns.className = 'action-btns';
-                
+                const actionBtns = document.createElement('div'); actionBtns.className = 'action-btns';
                 if (isPlaylist) {
                     actionBtns.innerHTML = `
                         <button style="background:#007bff;" onclick="openTransferModal('${item.videoId}', '${item.title.replace(/'/g, "").replace(/"/g, "")}')">🔄</button>
@@ -400,10 +386,7 @@
                 } else {
                     actionBtns.innerHTML = `<button style="background:#007bff;" onclick="addToPlaylist('${item.videoId}', '${item.title.replace(/'/g, "").replace(/"/g, "")}')">➕ เพิ่ม</button>`;
                 }
-
-                div.appendChild(titleDiv);
-                div.appendChild(actionBtns);
-                container.appendChild(div);
+                div.appendChild(titleDiv); div.appendChild(actionBtns); container.appendChild(div);
             });
         }
 
@@ -429,8 +412,7 @@
                     artist: 'กำลังเล่น',
                     artwork: [{ src: `https://img.youtube.com/vi/${videoData.videoId}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }]
                 });
-                navigator.mediaSession.setActionHandler('nexttrack', playNext);
-                navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+                navigator.mediaSession.setActionHandler('nexttrack', playNext); navigator.mediaSession.setActionHandler('previoustrack', playPrev);
             }
         }
 
